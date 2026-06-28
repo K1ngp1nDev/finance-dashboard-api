@@ -77,8 +77,17 @@ POST   /api/transactions/categorize
 POST   /api/transactions/import
 GET    /api/transactions/analytics/summary
 
+GET    /api/insights/budgets          # budget targets vs avg monthly spend
+GET    /api/insights/subscriptions    # recurring payments detected from transactions
+GET    /api/insights/goals            # savings goals with progress + forecast
+GET    /api/insights/categories       # category stats + demo categorization rules
+
 POST   /api/ai/query
 ```
+
+All `/api/insights/*` values are derived from the user's transactions (no extra
+tables) so the new Reports, Budgets, Subscriptions, Goals and Categories pages
+run entirely on the seeded demo data.
 
 ## Frontend
 
