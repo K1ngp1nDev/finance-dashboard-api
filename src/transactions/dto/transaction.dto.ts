@@ -4,14 +4,14 @@ import { Type } from 'class-transformer'
 
 export const CATEGORIES = [
   'Food',
-  'Transport',
-  'Housing',
-  'Healthcare',
-  'Entertainment',
-  'Shopping',
-  'Education',
-  'Travel',
+  'Rent',
   'Utilities',
+  'Transport',
+  'Subscriptions',
+  'Shopping',
+  'Health',
+  'Travel',
+  'Income',
   'Other',
 ] as const
 

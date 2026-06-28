@@ -1,19 +1,71 @@
-# Finance Dashboard — API
+# AI Finance Dashboard & Reporting API
 
-NestJS 11 backend for the Finance Dashboard application. Handles transaction CRUD, AI-powered categorization, CSV import and natural language finance queries via Claude.
+NestJS API for a portfolio-ready finance dashboard. It powers JWT auth, transaction CRUD, CSV imports, reporting analytics, seeded demo data, and AI-assisted finance queries that can run safely without paid API keys.
+
+## Portfolio Value
+
+This project demonstrates full-stack dashboard development: API-backed data flows, transaction analytics, charts, CSV import, JWT auth, AI-assisted categorization, and clean reporting UX.
 
 ## Stack
 
-- **NestJS 11** — modules, providers, guards, interceptors, pipes
-- **Prisma 7 + PostgreSQL** — ORM with schema migrations
-- **Anthropic Claude** — `claude-haiku-4-5` for categorization and AI queries
-- **Passport + JWT** — stateless authentication
-- **Swagger** — auto-generated API docs at `/api/docs`
-- **class-validator** — DTO validation via global pipes
+- **NestJS 11** for modular REST API structure
+- **Prisma 7 + PostgreSQL** for typed persistence and migrations
+- **Passport + JWT** for stateless authentication
+- **Anthropic Claude** for production AI mode
+- **Deterministic demo AI mode** for local demos without API keys
+- **Swagger** for API documentation at `http://localhost:3001/api/docs`
 
-## Endpoints
+## Features
 
+- Register/login with JWT authentication
+- Transaction CRUD with category filters
+- CSV import using `date,description,amount` rows
+- AI category suggestions with demo fallback
+- Natural-language finance assistant endpoint with demo fallback
+- Analytics summary for KPI cards, monthly trends, category breakdown, recent transactions, and largest expenses
+- Seed command that creates a realistic demo user and 96 transactions across 6 months
+
+## Setup
+
+```bash
+npm install
+cp .env.example .env
+npx prisma generate
+npx prisma migrate dev
+npm run db:seed
+npm run start:dev
 ```
+
+The API runs on `http://localhost:3001/api` by default.
+
+## Environment Variables
+
+```bash
+DATABASE_URL="postgresql://user:password@localhost:5432/finance_dashboard"
+JWT_SECRET="change-me-in-production"
+AI_DEMO_MODE=true
+ANTHROPIC_API_KEY=""
+PORT=3001
+```
+
+Set `AI_DEMO_MODE=true` or leave `ANTHROPIC_API_KEY` empty for a keyless portfolio demo. In demo mode, categorization and finance answers are deterministic and do not call Anthropic.
+
+## Demo Credentials
+
+- Email: `demo@example.com`
+- Password: `demo12345`
+
+## API Docs
+
+Swagger UI is available at:
+
+```text
+http://localhost:3001/api/docs
+```
+
+## Main Endpoints
+
+```text
 POST   /api/auth/register
 POST   /api/auth/login
 
@@ -27,18 +79,6 @@ GET    /api/transactions/analytics/summary
 
 POST   /api/ai/query
 ```
-
-## Getting started
-
-```bash
-npm install
-cp .env.example .env
-# Set DATABASE_URL, JWT_SECRET, ANTHROPIC_API_KEY in .env
-npx prisma migrate dev
-npm run start:dev
-```
-
-Swagger UI available at `http://localhost:3001/api/docs`.
 
 ## Frontend
 

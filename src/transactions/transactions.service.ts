@@ -12,6 +12,8 @@ import {
 @Injectable()
 export class TransactionsService {
   private anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  private readonly demoMode =
+    process.env.AI_DEMO_MODE === 'true' || !process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY === 'your_api_key_here'
 
   constructor(private prisma: PrismaService) {}
 
@@ -73,6 +75,8 @@ export class TransactionsService {
   }
 
   async categorize(description: string): Promise<Category> {
+    if (this.demoMode) return this.demoCategorize(description)
+
     const message = await this.anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 20,
@@ -89,6 +93,23 @@ Reply with only the category name, nothing else.`,
     const raw = (message.content[0] as { type: 'text'; text: string }).text.trim()
     const found = CATEGORIES.find((c) => c.toLowerCase() === raw.toLowerCase())
     return found ?? 'Other'
+  }
+
+  private demoCategorize(description: string): Category {
+    const text = description.toLowerCase()
+    const rules: Array<[Category, string[]]> = [
+      ['Income', ['salary', 'payroll', 'invoice', 'bonus', 'freelance', 'client payment']],
+      ['Rent', ['rent', 'apartment', 'landlord']],
+      ['Utilities', ['utility', 'electric', 'water', 'gas', 'internet', 'mobile', 'phone']],
+      ['Food', ['restaurant', 'coffee', 'grocery', 'market', 'pizza', 'lunch', 'dinner', 'cafe']],
+      ['Transport', ['uber', 'taxi', 'metro', 'fuel', 'parking', 'train', 'bus']],
+      ['Subscriptions', ['netflix', 'spotify', 'subscription', 'saas', 'cloud', 'notion']],
+      ['Shopping', ['amazon', 'mall', 'store', 'clothes', 'electronics']],
+      ['Health', ['pharmacy', 'doctor', 'clinic', 'health', 'dental']],
+      ['Travel', ['hotel', 'flight', 'airbnb', 'booking', 'travel']],
+    ]
+
+    return rules.find(([, keywords]) => keywords.some((keyword) => text.includes(keyword)))?.[0] ?? 'Other'
   }
 
   async importCsv(userId: string, csvText: string) {
@@ -116,26 +137,53 @@ Reply with only the category name, nothing else.`,
   async getAnalyticsSummary(userId: string) {
     const transactions = await this.prisma.transaction.findMany({
       where: { userId },
-      select: { category: true, amount: true, date: true },
+      select: { id: true, description: true, category: true, amount: true, date: true, notes: true },
+      orderBy: { date: 'desc' },
     })
 
     const byCategory: Record<string, number> = {}
-    for (const tx of transactions) {
-      byCategory[tx.category] = (byCategory[tx.category] ?? 0) + tx.amount
-    }
-
-    const sixMonthsAgo = new Date()
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
     const byMonth: Record<string, number> = {}
+    const incomeByMonth: Record<string, number> = {}
+    let totalIncome = 0
+    let totalExpenses = 0
+
     for (const tx of transactions) {
-      if (tx.date < sixMonthsAgo) continue
+      const isIncome = tx.category === 'Income' || tx.amount < 0
+      const value = Math.abs(tx.amount)
       const key = `${tx.date.getFullYear()}-${String(tx.date.getMonth() + 1).padStart(2, '0')}`
-      byMonth[key] = (byMonth[key] ?? 0) + tx.amount
+
+      if (isIncome) {
+        totalIncome += value
+        incomeByMonth[key] = (incomeByMonth[key] ?? 0) + value
+      } else {
+        totalExpenses += value
+        byCategory[tx.category] = (byCategory[tx.category] ?? 0) + value
+        byMonth[key] = (byMonth[key] ?? 0) + value
+      }
     }
 
-    const total = transactions.reduce((sum, tx) => sum + tx.amount, 0)
-    const count = transactions.length
+    const months = new Set([...Object.keys(byMonth), ...Object.keys(incomeByMonth)])
+    const averageMonthlySpend = months.size ? totalExpenses / months.size : 0
+    const balance = totalIncome - totalExpenses
+    const savingsRate = totalIncome > 0 ? (balance / totalIncome) * 100 : 0
 
-    return { total, count, byCategory, byMonth }
+    const largestExpenses = transactions
+      .filter((tx) => tx.category !== 'Income' && tx.amount >= 0)
+      .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount))
+      .slice(0, 8)
+
+    return {
+      totalIncome,
+      totalExpenses,
+      balance,
+      savingsRate,
+      averageMonthlySpend,
+      count: transactions.length,
+      byCategory,
+      byMonth,
+      incomeByMonth,
+      recentTransactions: transactions.slice(0, 8),
+      largestExpenses,
+    }
   }
 }
